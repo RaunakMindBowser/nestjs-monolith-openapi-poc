@@ -1,0 +1,17 @@
+{
+  "name": "nestjs-monolith-openapi-poc",
+  "version": "0.0.1",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "libs/*"
+  ],
+  "scripts": {
+    "backend:spec": "npm run spec -w @org/backend",
+    "backend:dev": "npm run dev -w @org/backend",
+    "client:generate": "npm run generate -w @org/api-client",
+    "frontend:dev": "npm run dev -w @org/frontend",
+    "frontend:typecheck": "npm run typecheck -w @org/frontend",
+    "generate": "npm run backend:spec && npm run client:generate"
+  }
+}

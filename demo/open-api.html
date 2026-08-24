@@ -1,0 +1,1020 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Code-First OpenAPI — NestJS Monolith POC</title>
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Prism.js — light theme -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-typescript.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-json.min.js"></script>
+
+  <!-- Mermaid -->
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+
+  <style>
+    /* ─── Design tokens (matches ../../nx-openapi-poc/demo/open-api.html) ──── */
+    :root {
+      --brand:        #2563eb;
+      --brand-strong: #1d4ed8;
+      --brand-ink:    #1e3a8a;
+      --ink:          #0f172a;
+      --ink-soft:     #334155;
+      --muted:        #64748b;
+      --faint:        #94a3b8;
+      --line:         #e2e8f0;
+      --line-soft:    #eef2f7;
+      --surface:      #ffffff;
+      --bg:           #f6f8fb;
+      --radius:       14px;
+      --shadow-sm:    0 1px 2px rgba(15,23,42,0.04), 0 1px 3px rgba(15,23,42,0.06);
+      --shadow-md:    0 8px 24px -6px rgba(15,23,42,0.12), 0 2px 6px -2px rgba(15,23,42,0.06);
+      --shadow-lg:    0 20px 48px -12px rgba(30,58,138,0.18);
+    }
+
+    * { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; }
+    code, pre, .mono { font-family: 'JetBrains Mono', ui-monospace, monospace; }
+
+    html { scroll-behavior: smooth; }
+    body {
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      letter-spacing: -0.011em;
+      text-rendering: optimizeLegibility;
+    }
+
+    h1, h2, h3 { letter-spacing: -0.025em; }
+    h1 { font-feature-settings: "ss01"; }
+    .eyebrow { font-size: 12px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; }
+
+    section[id] { scroll-margin-top: 72px; }
+
+    .nav-link { transition: color 0.15s; position: relative; padding-bottom: 2px; }
+    .nav-link:hover { color: var(--brand); }
+    .nav-link.active { color: var(--brand); font-weight: 600; }
+
+    .card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow-sm); }
+    .card-hover { transition: box-shadow 0.25s ease, transform 0.25s ease, border-color 0.25s ease; }
+    .card-hover:hover { box-shadow: var(--shadow-md); transform: translateY(-3px); border-color: #cbd5e1; }
+
+    .badge { display: inline-flex; align-items: center; gap: 5px; padding: 3px 11px; border-radius: 100px; font-size: 11px; font-weight: 600; letter-spacing: 0.03em; line-height: 1.6; }
+    .badge-blue { background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; }
+    .badge-green { background: #f0fdf4; color: #15803d; border: 1px solid #bbf7d0; }
+    .badge-amber { background: #fffbeb; color: #b45309; border: 1px solid #fde68a; }
+    .badge-red   { background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; }
+    .badge-purple{ background: #f5f3ff; color: #6d28d9; border: 1px solid #ddd6fe; }
+    .badge-slate { background: #f8fafc; color: #475569; border: 1px solid #e2e8f0; }
+
+    code.chip { font-size: 0.85em; padding: 1.5px 6px; border-radius: 6px; background: #eef2ff; color: var(--brand-strong); border: 1px solid #e0e7ff; font-weight: 500; white-space: nowrap; }
+    code.chip-red { background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; }
+
+    .ep-btn { display: flex; align-items: center; width: 100%; text-align: left; padding: 10px 13px; border-radius: 9px; border: 1.5px solid var(--line); font-family: 'JetBrains Mono', monospace; font-size: 12.5px; background: var(--surface); color: var(--ink-soft); transition: all 0.15s ease; cursor: pointer; }
+    .ep-btn:hover { border-color: #93c5fd; background: #f5f9ff; color: var(--brand-strong); transform: translateX(2px); }
+    .ep-btn.active { border-color: var(--brand); background: #eff6ff; color: var(--brand-strong); font-weight: 600; box-shadow: 0 0 0 3px rgba(37,99,235,0.08); }
+
+    .method { display: inline-block; padding: 2px 7px; border-radius: 5px; font-size: 10px; font-weight: 700; margin-right: 8px; letter-spacing: 0.03em; }
+    .method-GET    { background: #dcfce7; color: #15803d; }
+    .method-POST   { background: #dbeafe; color: #1e40af; }
+    .method-PATCH  { background: #fef9c3; color: #854d0e; }
+    .method-DELETE { background: #fee2e2; color: #991b1b; }
+
+    .tab-bar { display: flex; border-bottom: 1.5px solid var(--line); margin-bottom: 14px; gap: 2px; }
+    .tab { padding: 8px 14px; font-size: 13px; font-weight: 500; color: var(--muted); border-bottom: 2px solid transparent; margin-bottom: -1.5px; cursor: pointer; transition: all 0.15s; background: none; border-top: none; border-left: none; border-right: none; font-family: 'JetBrains Mono', monospace; }
+    .tab:hover { color: var(--brand); }
+    .tab.active { color: var(--brand); border-bottom-color: var(--brand); font-weight: 600; }
+
+    pre[class*="language-"] { border-radius: 10px; font-size: 12px; line-height: 1.6; max-height: 380px; overflow: auto; border: 1px solid var(--line); background: #fbfcfe !important; margin: 0; padding: 14px 16px; }
+    code[class*="language-"] { background: none !important; font-family: 'JetBrains Mono', monospace !important; font-size: 12px; tab-size: 2; }
+
+    /* Prism's default theme is tuned for LIGHT code blocks: it puts a
+       translucent white background on operator/entity/url tokens (":" in
+       JSON, for example) and a white text-shadow on every character —
+       both invisible on white, both an ugly smudge on a dark background.
+       Any code block placed on a dark surface needs this to neutralize them. */
+    pre.pre-dark, pre.pre-dark code { text-shadow: none !important; }
+    pre.pre-dark .token.operator,
+    pre.pre-dark .token.entity,
+    pre.pre-dark .token.url { background: transparent !important; }
+    /* Prism's light-theme token colors (e.g. dark magenta #905 for property
+       names) fall below WCAG AA contrast on this dark background — reuse the
+       same accent palette as the .terminal blocks elsewhere in this deck. */
+    pre.pre-dark .token.property,
+    pre.pre-dark .token.boolean,
+    pre.pre-dark .token.number,
+    pre.pre-dark .token.tag { color: #7dd3fc; }
+    pre.pre-dark .token.string,
+    pre.pre-dark .token.attr-name { color: #86efac; }
+    pre.pre-dark .token.punctuation,
+    pre.pre-dark .token.operator { color: #94a3b8; }
+
+    .terminal { background: linear-gradient(180deg, #111a2e 0%, #0d1424 100%); border-radius: 10px; padding: 16px 18px; font-family: 'JetBrains Mono', monospace; font-size: 12.5px; line-height: 1.85; border: 1px solid #1e293b; box-shadow: inset 0 1px 0 rgba(255,255,255,0.04); }
+    .terminal .comment { color: #64748b; }
+    .terminal .cmd { color: #86efac; }
+    .terminal .port { color: #7dd3fc; }
+    .terminal .warn { color: #fcd34d; }
+
+    .ai-bad  { background: linear-gradient(180deg, #fff7f7, #fff5f5); border: 1.5px solid #fca5a5; border-radius: 12px; padding: 18px; }
+    .ai-good { background: linear-gradient(180deg, #f5fdf8, #f0fdf4); border: 1.5px solid #86efac; border-radius: 12px; padding: 18px; }
+    .ai-bad  pre { background: #fff1f2 !important; border-color: #fecaca !important; }
+    .ai-good pre { background: #f0fdf4 !important; border-color: #bbf7d0 !important; }
+
+    .step-line { position: relative; padding-left: 56px; }
+    .step-line::before { content: ''; position: absolute; left: 20px; top: 42px; bottom: -24px; width: 2px; background: linear-gradient(180deg, var(--line), #eef2f7); }
+    .step-line:last-child::before { display: none; }
+    .step-num { position: absolute; left: 0; top: 2px; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 15px; box-shadow: 0 4px 10px -2px rgba(37,99,235,0.35); }
+
+    .section-label { font-size: 11px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--brand); }
+    .mermaid svg { max-width: 100%; }
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+    .sticky-nav { position: sticky; top: 0; z-index: 50; background: rgba(255,255,255,0.8); backdrop-filter: saturate(180%) blur(12px); -webkit-backdrop-filter: saturate(180%) blur(12px); border-bottom: 1px solid var(--line); }
+
+    .hero-bg { background:
+        radial-gradient(60% 60% at 50% 0%, rgba(37,99,235,0.06) 0%, rgba(37,99,235,0) 70%),
+        linear-gradient(180deg, #ffffff 0%, #fbfcff 100%); }
+
+    /* Entity vs DTO diff styling */
+    .diff-only { position: relative; }
+    .diff-only::after { content: attr(data-diff); position: absolute; right: 8px; top: 50%; transform: translateY(-50%); font-size: 10px; font-weight: 700; letter-spacing: 0.04em; padding: 1px 7px; border-radius: 5px; }
+    .diff-strip .diff-only::after { content: 'ENTITY ONLY'; background: #fef2f2; color: #b91c1c; }
+    .diff-swap .diff-only::after { content: 'DATE → STRING'; background: #fffbeb; color: #b45309; }
+  </style>
+
+  <script>
+    tailwind.config = { theme: { extend: {} } }
+  </script>
+</head>
+
+<body class="text-slate-900 min-h-screen" style="background: var(--bg);">
+
+  <!-- ─── STICKY NAV ──────────────────────────────────────────────────────────── -->
+  <nav class="sticky-nav px-6 py-3.5">
+    <div class="max-w-7xl mx-auto flex items-center justify-between">
+      <div class="flex items-center gap-2.5">
+        <div class="w-8 h-8 rounded-lg flex items-center justify-center shadow-sm" style="background: linear-gradient(135deg, #dc2626, #7c3aed);">
+          <span class="text-white text-[11px] font-extrabold tracking-tight">CF</span>
+        </div>
+        <span class="font-semibold text-slate-800 text-sm tracking-tight">Code-First OpenAPI <span class="text-slate-300 font-normal mx-0.5">·</span> <span class="text-slate-400 font-medium">NestJS Monolith POC</span></span>
+      </div>
+      <div class="hidden lg:flex items-center gap-6 text-[13px] font-medium text-slate-500">
+        <a href="#problem" class="nav-link">Problem</a>
+        <a href="#fit" class="nav-link">Does This Fit Us?</a>
+        <a href="#entity-dto" class="nav-link">Entity vs DTO</a>
+        <a href="#architecture" class="nav-link">Architecture</a>
+        <a href="#explorer" class="nav-link">Spec Explorer</a>
+        <a href="#ai-context" class="nav-link">AI Context Win</a>
+        <a href="#demo-steps" class="nav-link">Live Demo</a>
+      </div>
+    </div>
+  </nav>
+
+  <!-- ─── HERO ───────────────────────────────────────────────────────────────── -->
+  <section class="hero-bg border-b border-slate-100 px-6 pt-24 pb-20">
+    <div class="max-w-4xl mx-auto text-center">
+      <div class="badge badge-red mb-7">
+        <span class="w-1.5 h-1.5 rounded-full bg-red-500 inline-block"></span>
+        Companion POC · "We're not microservices — does this still apply?"
+      </div>
+      <h1 class="text-[2.75rem] sm:text-6xl font-extrabold text-slate-900 mb-6 leading-[1.05]">
+        No YAML. No aggregator.<br/>
+        <span style="background: linear-gradient(120deg, #dc2626, #db2777 60%, #7c3aed); -webkit-background-clip: text; background-clip: text; color: transparent;">Same contract, from decorators you already write.</span>
+      </h1>
+      <p class="text-slate-500 text-lg sm:text-[1.15rem] max-w-2xl mx-auto leading-relaxed">
+        One NestJS app, one React frontend, one repo — the shape most of our codebases actually have. The spec isn't hand-written; it's generated from <code class="chip">@nestjs/swagger</code> decorators already sitting on the controller. Everything downstream is identical to the microservices version.
+      </p>
+      <div class="flex gap-3 justify-center mt-9 flex-wrap">
+        <a href="#fit" class="text-white px-6 py-3 rounded-xl font-semibold text-sm transition-all shadow-sm hover:shadow-md hover:-translate-y-0.5" style="background: linear-gradient(135deg, #dc2626, #7c3aed);">Does This Fit Us? →</a>
+        <a href="#entity-dto" class="bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 px-6 py-3 rounded-xl font-semibold text-sm transition-all hover:-translate-y-0.5 hover:border-slate-300">Entity vs DTO</a>
+        <a href="#explorer" class="bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 px-6 py-3 rounded-xl font-semibold text-sm transition-all hover:-translate-y-0.5 hover:border-slate-300">Open Spec Explorer</a>
+      </div>
+
+      <div class="flex items-center justify-center gap-2.5 mt-12 flex-wrap">
+        <div class="flex items-center gap-2 text-xs text-slate-500 bg-white border border-slate-200 rounded-full pl-3 pr-4 py-1.5 shadow-sm">
+          <span class="w-2 h-2 rounded-full bg-red-400 inline-block ring-2 ring-red-100"></span>
+          backend <span class="mono text-slate-400 font-medium">:3000</span> <span class="text-slate-300">— NestJS, ts-node, no build step</span>
+        </div>
+        <div class="flex items-center gap-2 text-xs text-slate-500 bg-white border border-slate-200 rounded-full pl-3 pr-4 py-1.5 shadow-sm">
+          <span class="w-2 h-2 rounded-full bg-purple-400 inline-block ring-2 ring-purple-100"></span>
+          frontend <span class="mono text-slate-400 font-medium">:4300</span> <span class="text-slate-300">— Vite + React</span>
+        </div>
+        <div class="flex items-center gap-2 text-xs text-slate-500 bg-white border border-slate-200 rounded-full pl-3 pr-4 py-1.5 shadow-sm">
+          <span class="w-2 h-2 rounded-full bg-green-400 inline-block ring-2 ring-green-100"></span>
+          Swagger UI at <span class="mono text-slate-400 font-medium">/docs</span> <span class="text-slate-300">— already there today</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─── THE PROBLEM ─────────────────────────────────────────────────────────── -->
+  <section id="problem" class="px-6 py-24">
+    <div class="max-w-5xl mx-auto">
+      <div class="text-center mb-14">
+        <div class="section-label mb-3">The Problem</div>
+        <h2 class="text-[2rem] sm:text-4xl font-bold text-slate-900 mb-4 leading-tight">One repo doesn't mean<br class="hidden sm:block"/> one source of truth</h2>
+        <p class="text-slate-500 max-w-md mx-auto text-[15px] leading-relaxed">Being a monolith doesn't remove the tax — it just makes it easy to miss, because the fix (importing something from the backend) is one keystroke away.</p>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+        <div class="card card-hover p-7">
+          <div class="w-12 h-12 rounded-2xl bg-red-50 ring-1 ring-red-100 flex items-center justify-center mb-5">
+            <span class="text-2xl">📋</span>
+          </div>
+          <h3 class="font-semibold text-slate-900 mb-2 text-[15px]">Hand-copied DTOs, still</h3>
+          <p class="text-slate-500 text-sm leading-relaxed">
+            Same repo, same commit — and the frontend still hand-types <code class="chip">PatientDTO</code> because nobody wired the backend's actual return type through. It's real: our own <code class="chip">admin/patient/@types/index.ts</code> does exactly this.
+          </p>
+          <p class="text-red-500 text-xs mt-4 font-semibold">Proximity isn't the same as a contract.</p>
+        </div>
+
+        <div class="card card-hover p-7">
+          <div class="w-12 h-12 rounded-2xl bg-orange-50 ring-1 ring-orange-100 flex items-center justify-center mb-5">
+            <span class="text-2xl">🩻</span>
+          </div>
+          <h3 class="font-semibold text-slate-900 mb-2 text-[15px]">"Just import the entity" leaks internals</h3>
+          <p class="text-slate-500 text-sm leading-relaxed">
+            One `import` away from the ORM model. Every internal-only field — a risk score, an SSN, anything <code class="chip">@Exclude()</code>-d at runtime — is sitting right there in the type, waiting for someone to render it.
+          </p>
+          <p class="text-orange-500 text-xs mt-4 font-semibold">See <a href="#entity-dto" class="underline">Entity vs DTO</a> below — it's provable, not hypothetical.</p>
+        </div>
+
+        <div class="card card-hover p-7">
+          <div class="w-12 h-12 rounded-2xl bg-purple-50 ring-1 ring-purple-100 flex items-center justify-center mb-5">
+            <span class="text-2xl">🕰️</span>
+          </div>
+          <h3 class="font-semibold text-slate-900 mb-2 text-[15px]">Dates lie about themselves</h3>
+          <p class="text-slate-500 text-sm leading-relaxed">
+            The backend holds a real <code class="chip">Date</code>. JSON only ever sends a <code class="chip">string</code>. A hand-copied or entity-imported type says <code class="chip-red">Date</code>; the value that actually arrives is a string. TypeScript won't catch it — it compiles either way.
+          </p>
+          <p class="text-purple-500 text-xs mt-4 font-semibold">Wrong at runtime, invisible at compile time.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─── DOES THIS FIT US? ──────────────────────────────────────────────────── -->
+  <section id="fit" class="px-6 py-24 bg-white border-y border-slate-100">
+    <div class="max-w-5xl mx-auto">
+      <div class="text-center mb-14">
+        <div class="section-label mb-3">Does This Fit Us?</div>
+        <h2 class="text-[2rem] sm:text-4xl font-bold text-slate-900 mb-4 leading-tight">The pipeline is identical.<br class="hidden sm:block"/> Only the plumbing changes.</h2>
+        <p class="text-slate-500 max-w-xl mx-auto text-[15px] leading-relaxed">The microservices companion POC (<code class="chip">../nx-openapi-poc</code>) needed a <code class="chip">ServiceLoader</code> to pick between several generated packages. One backend needs none of that — but the three things that actually matter are unchanged.</p>
+      </div>
+
+      <div class="card overflow-x-auto mb-10">
+        <table class="w-full text-sm min-w-[640px]">
+          <thead>
+            <tr class="border-b border-slate-200 bg-slate-50/60">
+              <th class="text-left font-semibold text-slate-700 px-5 py-3.5"></th>
+              <th class="text-left font-semibold text-slate-700 px-5 py-3.5">Microservices POC</th>
+              <th class="text-left font-semibold text-slate-700 px-5 py-3.5">This monolith POC</th>
+            </tr>
+          </thead>
+          <tbody class="text-slate-600">
+            <tr class="border-b border-slate-100">
+              <td class="px-5 py-3.5 font-medium text-slate-700">Where the spec comes from</td>
+              <td class="px-5 py-3.5">Hand-written YAML per service</td>
+              <td class="px-5 py-3.5 text-slate-900">Generated from <code class="chip">@nestjs/swagger</code> decorators</td>
+            </tr>
+            <tr class="border-b border-slate-100 bg-slate-50/40">
+              <td class="px-5 py-3.5 font-medium text-slate-700">Number of generated clients</td>
+              <td class="px-5 py-3.5">One per service</td>
+              <td class="px-5 py-3.5 text-slate-900">One, total</td>
+            </tr>
+            <tr class="border-b border-slate-100">
+              <td class="px-5 py-3.5 font-medium text-slate-700">Aggregator / ServiceLoader</td>
+              <td class="px-5 py-3.5">Needed — picks between packages via lazy import</td>
+              <td class="px-5 py-3.5 text-slate-900"><strong>Not needed</strong> — there's only one client to import</td>
+            </tr>
+            <tr class="border-b border-slate-100 bg-slate-50/40">
+              <td class="px-5 py-3.5 font-medium text-slate-700">Base URLs to configure</td>
+              <td class="px-5 py-3.5">One per service</td>
+              <td class="px-5 py-3.5 text-slate-900">One</td>
+            </tr>
+            <tr>
+              <td class="px-5 py-3.5 font-medium text-slate-700 align-top">What doesn't change</td>
+              <td class="px-5 py-3.5 text-slate-900" colspan="2">
+                <span class="badge badge-green mr-1.5 mb-1.5">Types stay aligned with the contract</span>
+                <span class="badge badge-green mr-1.5 mb-1.5">AI reads real types instead of guessing</span>
+                <span class="badge badge-green mb-1.5">Breaking changes fail the build, not production</span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="card p-7 bg-red-50/40 border-red-100">
+        <p class="text-slate-700 text-[15px] leading-relaxed">
+          <strong class="text-slate-900">If you already use <code class="chip">@nestjs/swagger</code>,</strong> you're most of the way there — you're likely already writing some of the decorators this needs for your Swagger UI page. The only thing usually missing is an explicit <code class="chip">operationId</code> per route (see <a class="underline" href="#explorer">Spec Explorer</a>) and separating your response DTO from your entity/ORM model (see next section) if you haven't already.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─── ENTITY VS DTO ──────────────────────────────────────────────────────── -->
+  <section id="entity-dto" class="px-6 py-24">
+    <div class="max-w-5xl mx-auto">
+      <div class="text-center mb-12">
+        <div class="section-label mb-3">The Flagship Argument</div>
+        <h2 class="text-[2rem] sm:text-4xl font-bold text-slate-900 mb-4 leading-tight">"Why not just import the entity?"</h2>
+        <p class="text-slate-500 max-w-xl mx-auto text-[15px] leading-relaxed">Because it's one <code class="chip">import</code> away from correct, and the compiler will not stop you. Here's the actual code from this repo.</p>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+        <div>
+          <div class="flex items-center gap-2 mb-3">
+            <span class="badge badge-red">Internal — never exported</span>
+          </div>
+          <p class="text-xs text-slate-500 mb-2 mono">apps/backend/src/patients/patient.entity.ts</p>
+          <pre class="language-typescript diff-strip"><code>export interface PatientEntity {
+  id: string;
+  mrn: string;
+  firstName: string;
+  lastName: string;
+  dateOfBirth: Date;
+  gender: 'MALE' | 'FEMALE' | 'OTHER';
+  email: string;
+  ssn: string;
+  riskScore: number;
+  createdAt: Date;
+}</code></pre>
+        </div>
+
+        <div>
+          <div class="flex items-center gap-2 mb-3">
+            <span class="badge badge-green">The actual contract</span>
+          </div>
+          <p class="text-xs text-slate-500 mb-2 mono">apps/backend/src/patients/dto/patient-response.dto.ts</p>
+          <pre class="language-typescript"><code>export class PatientResponseDto {
+  @ApiProperty() id!: string;
+  @ApiProperty() mrn!: string;
+  @ApiProperty() firstName!: string;
+  @ApiProperty() lastName!: string;
+  @ApiProperty({ format: 'date' })
+  dateOfBirth!: string;
+  @ApiProperty({ enum: ['MALE','FEMALE','OTHER'] })
+  gender!: 'MALE' | 'FEMALE' | 'OTHER';
+  @ApiProperty() email!: string;
+  @ApiProperty({ format: 'date-time' })
+  createdAt!: string;
+}</code></pre>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-5 mb-8">
+        <div class="card p-6 border-red-100">
+          <div class="badge badge-red mb-3">Gap 1 — sensitive fields leak</div>
+          <p class="text-slate-600 text-sm leading-relaxed"><code class="chip-red">ssn</code> and <code class="chip-red">riskScore</code> exist on <code class="chip">PatientEntity</code>. Import that type into the frontend and both are one autocomplete away from a JSX template. Generate from <code class="chip">PatientResponseDto</code> instead, and they structurally cannot appear — they were never in the contract.</p>
+        </div>
+        <div class="card p-6 border-amber-100">
+          <div class="badge badge-amber mb-3">Gap 2 — dates are wrong twice</div>
+          <p class="text-slate-600 text-sm leading-relaxed">The entity's <code class="chip-red">dateOfBirth: Date</code> is real in memory but JSON can only ever send a string. Import the entity type and TypeScript will happily let you call <code class="chip">.getMonth()</code> on a value that's actually a string at runtime — no error, no warning, wrong every time.</p>
+        </div>
+      </div>
+
+      <div class="card p-7 bg-gradient-to-br from-slate-900 to-slate-800 text-slate-100">
+        <p class="text-sm leading-relaxed">
+          <span class="text-green-400 font-semibold">Verified, not asserted:</span> generating the spec from this repo's decorators and inspecting the output —
+        </p>
+        <pre class="language-json pre-dark mt-3" style="background:#0d1424 !important; border-color:#1e293b !important;"><code>{
+  "PatientResponseDto": {
+    "properties": {
+      "id": { "type": "string" },
+      "mrn": { "type": "string" },
+      "firstName": { "type": "string" },
+      "lastName": { "type": "string" },
+      "dateOfBirth": { "type": "string", "format": "date" },
+      "gender": { "type": "string", "enum": ["MALE","FEMALE","OTHER"] },
+      "email": { "type": "string" },
+      "createdAt": { "type": "string", "format": "date-time" }
+    }
+  }
+}
+// ssn: absent. riskScore: absent. dateOfBirth/createdAt: "string", not Date.</code></pre>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─── ARCHITECTURE ────────────────────────────────────────────────────────── -->
+  <section id="architecture" class="px-6 py-24 bg-white border-y border-slate-100">
+    <div class="max-w-6xl mx-auto">
+      <div class="text-center mb-14">
+        <div class="section-label mb-3">The Solution</div>
+        <h2 class="text-[2rem] sm:text-4xl font-bold text-slate-900 mb-4 leading-tight">Code-First OpenAPI Pipeline</h2>
+        <p class="text-slate-500 max-w-lg mx-auto text-[15px] leading-relaxed">Decorators are the input. The spec is a build artifact, not a hand-maintained file. No server needs to be running to produce it.</p>
+      </div>
+
+      <div class="card p-8 mb-8">
+        <div class="mermaid text-center">
+%%{init: {'theme': 'base', 'themeVariables': {'primaryColor': '#fef2f2', 'primaryTextColor': '#7f1d1d', 'primaryBorderColor': '#fca5a5', 'lineColor': '#f87171', 'secondaryColor': '#f0fdf4', 'tertiaryColor': '#faf5ff'}}}%%
+flowchart LR
+    subgraph B [" NestJS Backend "]
+        DEC["patients.controller.ts\n@ApiOperation · @ApiResponse\n@ApiProperty on DTOs"]
+    end
+    subgraph GEN [" generate-spec.ts "]
+        NS["NestFactory.create(AppModule)\nNO app.listen() — no port bound"]
+        DOC["SwaggerModule.createDocument()"]
+    end
+    SPEC["libs/api-client/openapi.json"]
+    subgraph CLI [" @org/api-client "]
+        TC["openapi-ts generate\ntypes.gen.ts · services.gen.ts"]
+    end
+    FE["apps/frontend · :4300\nfetchPatients() · addPatient()\nconfigureApiClient()"]
+    DEC --> NS --> DOC --> SPEC
+    SPEC -->|"npm run client:generate"| TC
+    TC --> FE
+        </div>
+      </div>
+
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div class="bg-red-50/70 border border-red-100 rounded-2xl p-5 transition-transform hover:-translate-y-0.5">
+          <div class="text-red-700 font-semibold text-sm mb-1.5 tracking-tight"><span class="text-red-400">01</span> · Decorate</div>
+          <p class="text-red-700/70 text-xs leading-relaxed">Controllers and DTOs carry <code class="mono font-medium">@ApiOperation</code>/<code class="mono font-medium">@ApiProperty</code> — code you'd write for the Swagger page anyway.</p>
+        </div>
+        <div class="bg-orange-50/70 border border-orange-100 rounded-2xl p-5 transition-transform hover:-translate-y-0.5">
+          <div class="text-orange-700 font-semibold text-sm mb-1.5 tracking-tight"><span class="text-orange-400">02</span> · Dump</div>
+          <p class="text-orange-700/70 text-xs leading-relaxed"><code class="mono font-medium">npm run backend:spec</code> boots Nest, builds the document, writes JSON, exits. No port ever opens.</p>
+        </div>
+        <div class="bg-violet-50/70 border border-violet-100 rounded-2xl p-5 transition-transform hover:-translate-y-0.5">
+          <div class="text-violet-700 font-semibold text-sm mb-1.5 tracking-tight"><span class="text-violet-400">03</span> · Generate</div>
+          <p class="text-violet-700/70 text-xs leading-relaxed">Same <code class="mono font-medium">@hey-api/openapi-ts</code> generator as the YAML version — it doesn't know or care where the spec came from.</p>
+        </div>
+        <div class="bg-green-50/70 border border-green-100 rounded-2xl p-5 transition-transform hover:-translate-y-0.5">
+          <div class="text-green-700 font-semibold text-sm mb-1.5 tracking-tight"><span class="text-green-400">04</span> · Stay Safe</div>
+          <p class="text-green-700/70 text-xs leading-relaxed">Rename a decorated field → both the backend's mapping code and the frontend fail to compile. See <a href="#demo-steps" class="underline">Live Demo</a>.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─── SPEC EXPLORER ───────────────────────────────────────────────────────── -->
+  <section id="explorer" class="px-6 py-20">
+    <div class="max-w-6xl mx-auto">
+      <div class="text-center mb-12">
+        <div class="section-label mb-3">Interactive</div>
+        <h2 class="text-[2rem] sm:text-4xl font-bold text-slate-900 mb-4 leading-tight">Spec Explorer</h2>
+        <p class="text-slate-500 max-w-lg mx-auto text-[15px] leading-relaxed">Pick an endpoint. Follow it from the controller decorator, through the generated spec and client, to how the frontend actually calls it.</p>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <!-- Endpoint list -->
+        <div class="md:col-span-1">
+          <div class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2 px-1">Patients API</div>
+          <div id="endpoint-list" class="space-y-2"></div>
+        </div>
+
+        <!-- Code panels -->
+        <div class="md:col-span-3 grid grid-cols-1 lg:grid-cols-3 gap-4">
+          <div>
+            <div class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">① Controller (source)</div>
+            <pre class="language-typescript" style="min-height:220px;"><code id="controller-code-inner"></code></pre>
+          </div>
+          <div>
+            <div class="tab-bar">
+              <button id="tab-spec" class="tab active" onclick="switchTab('spec')">generated spec</button>
+              <button id="tab-types" class="tab" onclick="switchTab('types')">generated client</button>
+            </div>
+            <pre class="language-json" style="min-height:220px;"><code id="gen-code-inner"></code></pre>
+          </div>
+          <div>
+            <div class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">③ Frontend consumer</div>
+            <pre class="language-typescript" style="min-height:220px;"><code id="consumer-code-inner"></code></pre>
+          </div>
+        </div>
+      </div>
+
+      <div class="mt-6 p-4 rounded-xl border border-blue-100 bg-blue-50/50 flex items-start gap-3">
+        <span class="text-blue-500 text-lg leading-none mt-0.5">💡</span>
+        <p id="ai-hint" class="text-slate-700 text-sm leading-relaxed"></p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─── AI CONTEXT WIN ─────────────────────────────────────────────────────── -->
+  <section id="ai-context" class="px-6 py-24 bg-white border-y border-slate-100">
+    <div class="max-w-6xl mx-auto">
+      <div class="text-center mb-12">
+        <div class="section-label mb-3">AI Context Win</div>
+        <h2 class="text-[2rem] sm:text-4xl font-bold text-slate-900 mb-5 leading-tight">Same prompt. Radically different results.</h2>
+        <div class="inline-flex items-center gap-2.5 bg-slate-50 border border-slate-200 rounded-full pl-5 pr-4 py-2.5 text-sm mt-1 shadow-sm">
+          <span class="text-slate-400 font-medium text-xs uppercase tracking-wider">Prompt</span>
+          <span class="text-slate-300">·</span>
+          <code class="mono text-blue-600 text-xs">"Write a function that fetches a patient by ID and returns their record"</code>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div>
+          <div class="flex items-center gap-2 mb-3">
+            <div class="w-5 h-5 rounded-full bg-red-500 flex items-center justify-center">
+              <span class="text-white text-xs font-bold">✕</span>
+            </div>
+            <span class="font-semibold text-gray-900">Without a generated client</span>
+          </div>
+          <div class="ai-bad">
+            <p class="text-red-600 text-xs font-medium mb-3">AI guesses the shape from the field name and common conventions:</p>
+            <pre class="language-typescript" style="max-height:300px;"><code>// AI has to guess everything
+interface Patient {
+  id: number;         // ❌ wrong — should be string
+  name: string;        // ❌ wrong — spec has firstName/lastName
+  dob: Date;            // ❌ wrong field name AND wrong type —
+                         //    wire format is a string, field is dateOfBirth
+  ssn?: string;          // ❌ this field isn't in the API response at all
+}
+
+async function fetchPatient(id: number) {
+  const res = await fetch(`/api/patients/${id}`); // ❌ wrong URL, no auth
+  return res.json() as Patient;
+}</code></pre>
+            <div class="flex flex-wrap gap-2 mt-3">
+              <span class="badge badge-red">dob vs dateOfBirth</span>
+              <span class="badge badge-red">id is number not string</span>
+              <span class="badge badge-red">ssn doesn't exist in the API</span>
+              <span class="badge badge-red">Missing x-api-key header</span>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <div class="flex items-center gap-2 mb-3">
+            <div class="w-5 h-5 rounded-full bg-green-500 flex items-center justify-center">
+              <span class="text-white text-xs font-bold">✓</span>
+            </div>
+            <span class="font-semibold text-gray-900">With @org/api-client</span>
+          </div>
+          <div class="ai-good">
+            <p class="text-green-700 text-xs font-medium mb-3">AI reads the generated package — exact shape, auth wired, nothing to leak:</p>
+            <pre class="language-typescript" style="max-height:300px;"><code>import { getPatient } from '@org/api-client';
+import type { PatientsApi } from '@org/api-client';
+
+// AI knows the exact return type from the generated spec
+async function fetchPatient(
+  id: string,
+): Promise&lt;PatientsApi.PatientResponseDto&gt; {
+  // getPatient() is generated: URL, x-api-key header, path param handled
+  const result = await getPatient({ path: { id } });
+
+  if (result.error) {
+    // ErrorResponseDto — typed, not `unknown`
+    throw new Error(result.error.message);
+  }
+
+  // dateOfBirth: string (ISO) — exactly what the server sends
+  // no ssn field exists on this type to accidentally render
+  return result.data!;
+}</code></pre>
+            <div class="flex flex-wrap gap-2 mt-3">
+              <span class="badge badge-green">Exact types from the spec</span>
+              <span class="badge badge-green">Auth header wired automatically</span>
+              <span class="badge badge-green">dateOfBirth typed as string</span>
+              <span class="badge badge-green">No ssn field to leak</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="mt-10 p-7 text-center max-w-3xl mx-auto rounded-2xl border border-blue-100" style="background: linear-gradient(135deg, #eff6ff, #f5f3ff);">
+        <p class="text-slate-700 text-[15px] leading-relaxed">
+          The generated package is <strong class="text-slate-900">machine-readable context</strong>, and it exists whether or not you run microservices. Tell the AI to use <code class="chip">@org/api-client</code> and it reads the same types the compiler does — <strong class="text-slate-900">correct by construction</strong>, not by luck.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─── LIVE DEMO ──────────────────────────────────────────────────────────── -->
+  <section id="demo-steps" class="px-6 py-24">
+    <div class="max-w-3xl mx-auto">
+      <div class="text-center mb-14">
+        <div class="section-label mb-3">Live Demo</div>
+        <h2 class="text-[2rem] sm:text-4xl font-bold text-slate-900 mb-4 leading-tight">15-Minute Walkthrough</h2>
+        <p class="text-slate-500 text-[15px]">Terminal and editor only. Full script: <code class="chip">demo/SCRIPT.md</code>.</p>
+      </div>
+
+      <div class="card p-5 mb-8 bg-gray-900 border-gray-800">
+        <div class="section-label text-gray-500 mb-4">Before you begin — start both apps (2 terminals)</div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div class="bg-gray-800 rounded-lg p-3">
+            <div class="text-gray-500 text-xs mono mb-1"># Terminal 1</div>
+            <div class="text-red-400 text-xs mono">npm run backend:dev</div>
+            <div class="text-gray-500 text-xs mt-1">→ localhost:3000 · Swagger UI at /docs</div>
+          </div>
+          <div class="bg-gray-800 rounded-lg p-3">
+            <div class="text-gray-500 text-xs mono mb-1"># Terminal 2</div>
+            <div class="text-purple-400 text-xs mono">npm run frontend:dev</div>
+            <div class="text-gray-500 text-xs mt-1">→ localhost:4300</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="space-y-6">
+
+        <div class="step-line">
+          <div class="step-num bg-red-600 text-white">1</div>
+          <div class="card p-5">
+            <div class="flex items-center justify-between mb-2">
+              <h3 class="font-semibold text-gray-900">The contract lives in the controller</h3>
+              <span class="badge badge-red">~2 min</span>
+            </div>
+            <p class="text-gray-500 text-sm mb-3">Open <code class="mono text-red-600 text-xs">patients.controller.ts</code> and <code class="mono text-red-600 text-xs">dto/patient-response.dto.ts</code>. No separate YAML file — the decorators are the source.</p>
+            <div class="terminal">
+              <span class="comment"># open in editor</span><br/>
+              <span class="cmd">open apps/backend/src/patients/patients.controller.ts</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="step-line">
+          <div class="step-num bg-red-600 text-white">2</div>
+          <div class="card p-5">
+            <div class="flex items-center justify-between mb-2">
+              <h3 class="font-semibold text-gray-900">Generate the spec — no server, no port</h3>
+              <span class="badge badge-red">~10 sec</span>
+            </div>
+            <p class="text-gray-500 text-sm mb-3">Dumps <code class="mono text-red-600 text-xs">libs/api-client/openapi.json</code>. Grep it for <code class="mono text-red-600 text-xs">ssn</code> — it isn't there.</p>
+            <div class="terminal">
+              <span class="cmd">npm run backend:spec</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="step-line">
+          <div class="step-num bg-red-600 text-white">3</div>
+          <div class="card p-5">
+            <div class="flex items-center justify-between mb-2">
+              <h3 class="font-semibold text-gray-900">Generate the client</h3>
+              <span class="badge badge-amber">~10 sec</span>
+            </div>
+            <p class="text-gray-500 text-sm mb-3">Same generator as the microservices POC — <code class="mono text-amber-600 text-xs">@hey-api/openapi-ts</code> doesn't care that this spec came from decorators.</p>
+            <div class="terminal">
+              <span class="cmd">npm run client:generate</span><br/>
+              <span class="comment"># or both steps together:</span><br/>
+              <span class="cmd">npm run generate</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="step-line">
+          <div class="step-num bg-amber-500 text-white">4</div>
+          <div class="card p-5">
+            <div class="flex items-center justify-between mb-2">
+              <h3 class="font-semibold text-gray-900">Frontend — zero hand-written types</h3>
+              <span class="badge badge-amber">~2 min</span>
+            </div>
+            <p class="text-gray-500 text-sm mb-3">Open <code class="mono text-amber-600 text-xs">apps/frontend/src/services/patientService.ts</code>. No <code class="mono text-amber-600 text-xs">ServiceLoader</code> — one client, imported directly.</p>
+            <div class="terminal">
+              <span class="cmd">open apps/frontend/src/services/patientService.ts</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="step-line">
+          <div class="step-num bg-purple-600 text-white">5</div>
+          <div class="card p-5">
+            <div class="flex items-center justify-between mb-2">
+              <h3 class="font-semibold text-gray-900">Break the contract → break both sides</h3>
+              <span class="badge badge-purple">~2 min</span>
+            </div>
+            <p class="text-gray-500 text-sm mb-3">Renames <code class="mono text-purple-600 text-xs">PatientResponseDto.firstName</code> → <code class="mono text-purple-600 text-xs">legalFirstName</code> and regenerates. Two failures appear — the backend's own mapping code <em>and</em> the frontend.</p>
+            <div class="terminal">
+              <span class="cmd">./demo/break-contract.sh</span><br/>
+              <span class="cmd">./demo/check-types.sh</span><br/><br/>
+              <span class="comment"># src/patients/patients.service.ts(70,7): error TS2339</span><br/>
+              <span class="comment"># src/components/PatientList.tsx(86,22): error TS2339</span><br/><br/>
+              <span class="comment"># revert:</span><br/>
+              <span class="cmd">./demo/restore-contract.sh</span><br/>
+              <span class="cmd">./demo/check-types.sh</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="step-line">
+          <div class="step-num bg-green-600 text-white">6</div>
+          <div class="card p-5">
+            <div class="flex items-center justify-between mb-2">
+              <h3 class="font-semibold text-gray-900">You already have Swagger UI — look at it</h3>
+              <span class="badge badge-green">~1 min</span>
+            </div>
+            <p class="text-gray-500 text-sm mb-3">Same JSON that page renders from also produced the typed client. The doc didn't change — what consumes it did.</p>
+            <div class="terminal">
+              <span class="cmd">open http://localhost:3000/docs</span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- ─── FOOTER ─────────────────────────────────────────────────────────────── -->
+  <footer class="bg-white border-t border-slate-100 px-6 py-12 text-center">
+    <p class="text-slate-400 text-xs">
+      Mindbowser · <code class="chip">demo/SCRIPT.md</code> for talking points · <code class="chip">demo/SETUP.md</code> to set this up yourself · <code class="chip">../nx-openapi-poc</code> for the microservices version
+    </p>
+  </footer>
+
+  <script>
+    const endpoints = [
+      { id: 'listPatients',   label: 'GET /patients',        method: 'GET' },
+      { id: 'createPatient',  label: 'POST /patients',       method: 'POST' },
+      { id: 'getPatient',     label: 'GET /patients/{id}',   method: 'GET' },
+      { id: 'updatePatient',  label: 'PATCH /patients/{id}', method: 'PATCH' },
+      { id: 'deletePatient',  label: 'DELETE /patients/{id}',method: 'DELETE' },
+    ];
+
+    const data = {
+      listPatients: {
+        controller: `@Get()
+@ApiOperation({ operationId: 'listPatients', summary: 'List all patients' })
+@ApiResponse({ status: 200, type: [PatientResponseDto] })
+list(): PatientResponseDto[] {
+  return this.patients.list();
+}`,
+        spec: `"get": {
+  "operationId": "listPatients",
+  "summary": "List all patients",
+  "responses": {
+    "200": {
+      "content": {
+        "application/json": {
+          "schema": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/PatientResponseDto" }
+          }
+        }
+      }
+    }
+  },
+  "security": [{ "apiKey": [] }]
+}
+
+// components.schemas.PatientResponseDto — no ssn, no riskScore:
+{
+  "id": "string", "mrn": "string",
+  "firstName": "string", "lastName": "string",
+  "dateOfBirth": "string (format: date)",
+  "gender": "MALE | FEMALE | OTHER",
+  "email": "string",
+  "createdAt": "string (format: date-time)"
+}`,
+        types: `// libs/api-client/src/generated/types.gen.ts
+export type PatientResponseDto = {
+  id: string;
+  mrn: string;
+  firstName: string;
+  lastName: string;
+  dateOfBirth: string;
+  gender: 'MALE' | 'FEMALE' | 'OTHER';
+  email: string;
+  createdAt: string;
+};
+
+export type ListPatientsResponse = Array<PatientResponseDto>;
+
+// services.gen.ts
+export const listPatients = (options?) =>
+  (options?.client ?? client).get({ url: '/patients', ...options });`,
+        consumer: `// apps/frontend/src/services/patientService.ts
+import { listPatients } from '@org/api-client';
+import type { PatientsApi } from '@org/api-client';
+
+export async function fetchPatients():
+  Promise<PatientsApi.PatientResponseDto[]> {
+  const result = await listPatients();
+  if (result.error) throw new Error('Failed to load patients');
+  return result.data!;
+}`,
+        hint: `listPatients() returns PatientResponseDto[]. No ssn, no riskScore — those live only on PatientEntity, server-side. dateOfBirth and createdAt are strings, not Dates — that's what JSON actually carries. The x-api-key header is attached automatically by configureApiClient().`,
+      },
+      createPatient: {
+        controller: `@Post()
+@ApiOperation({ operationId: 'createPatient', summary: 'Register a new patient' })
+@ApiResponse({ status: 201, type: PatientResponseDto })
+@ApiResponse({ status: 400, type: ErrorResponseDto })
+create(@Body() dto: CreatePatientDto): PatientResponseDto {
+  return this.patients.create(dto);
+}`,
+        spec: `"post": {
+  "operationId": "createPatient",
+  "requestBody": {
+    "required": true,
+    "content": { "application/json": {
+      "schema": { "$ref": "#/components/schemas/CreatePatientDto" } } }
+  },
+  "responses": {
+    "201": { "content": { "application/json": {
+      "schema": { "$ref": "#/components/schemas/PatientResponseDto" } } } },
+    "400": { "content": { "application/json": {
+      "schema": { "$ref": "#/components/schemas/ErrorResponseDto" } } } }
+  },
+  "security": [{ "apiKey": [] }]
+}
+
+// CreatePatientDto — required because @IsString()/@IsEmail()/
+// @IsEnum() have no @IsOptional():
+{
+  "firstName": "string", "lastName": "string",
+  "dateOfBirth": "string (example: 1990-05-14)",
+  "gender": "MALE | FEMALE | OTHER",
+  "email": "string"
+}`,
+        types: `export type CreatePatientDto = {
+  firstName: string;
+  lastName: string;
+  dateOfBirth: string;
+  gender: 'MALE' | 'FEMALE' | 'OTHER';
+  email: string;
+};
+
+export type CreatePatientResponse = PatientResponseDto;
+export type CreatePatientError = ErrorResponseDto;`,
+        consumer: `export async function addPatient(
+  input: PatientsApi.CreatePatientDto,
+): Promise<PatientsApi.PatientResponseDto> {
+  const result = await createPatient({ body: input });
+  if (result.error) throw new Error(result.error.message);
+  return result.data!;
+}`,
+        hint: `CreatePatientDto's five fields are required because class-validator decorators (@IsString(), @IsEmail(), @IsEnum()) have no @IsOptional() — the same decorators that validate the request at runtime also describe it in the spec. Get one wrong and result.error is a typed ErrorResponseDto, not unknown.`,
+      },
+      getPatient: {
+        controller: `@Get(':id')
+@ApiOperation({ operationId: 'getPatient', summary: 'Get a single patient by ID' })
+@ApiResponse({ status: 200, type: PatientResponseDto })
+@ApiResponse({ status: 404, type: ErrorResponseDto })
+get(@Param('id') id: string): PatientResponseDto {
+  return this.patients.get(id);
+}`,
+        spec: `"get": {
+  "operationId": "getPatient",
+  "parameters": [
+    { "name": "id", "required": true, "in": "path",
+      "schema": { "type": "string" } }
+  ],
+  "responses": {
+    "200": { "content": { "application/json": {
+      "schema": { "$ref": "#/components/schemas/PatientResponseDto" } } } },
+    "404": { "content": { "application/json": {
+      "schema": { "$ref": "#/components/schemas/ErrorResponseDto" } } } }
+  },
+  "security": [{ "apiKey": [] }]
+}`,
+        types: `export type GetPatientData = { path: { id: string } };
+export type GetPatientResponse = PatientResponseDto;
+export type GetPatientError = ErrorResponseDto;`,
+        consumer: `import { getPatient } from '@org/api-client';
+
+const result = await getPatient({ path: { id } });
+if (result.error) throw new Error(result.error.message);
+// result.data: PatientResponseDto — no ssn field to
+// accidentally render on a patient detail screen
+return result.data!;`,
+        hint: `@Param('id') id: string in the controller becomes { path: { id: string } } in GetPatientData — the AI never has to guess whether the ID is a path param or a query param.`,
+      },
+      updatePatient: {
+        controller: `@Patch(':id')
+@ApiOperation({ operationId: 'updatePatient', summary: 'Update a patient (partial)' })
+@ApiResponse({ status: 200, type: PatientResponseDto })
+@ApiResponse({ status: 404, type: ErrorResponseDto })
+update(@Param('id') id: string, @Body() dto: UpdatePatientDto)
+  : PatientResponseDto {
+  return this.patients.update(id, dto);
+}
+
+// dto/update-patient.dto.ts
+import { PartialType } from '@nestjs/swagger'; // not @nestjs/mapped-types
+export class UpdatePatientDto extends PartialType(CreatePatientDto) {}`,
+        spec: `// UpdatePatientDto — every CreatePatientDto field, now optional.
+// PartialType from @nestjs/swagger re-emits each @ApiProperty as
+// optional. Import PartialType from @nestjs/mapped-types instead
+// and this generates as { [key: string]: unknown } — hit while
+// building this POC, see demo/SETUP.md gotcha #1.
+{
+  "firstName": "string?", "lastName": "string?",
+  "dateOfBirth": "string?",
+  "gender": "(MALE | FEMALE | OTHER)?",
+  "email": "string?"
+}`,
+        types: `export type UpdatePatientDto = {
+  firstName?: string;
+  lastName?: string;
+  dateOfBirth?: string;
+  gender?: 'MALE' | 'FEMALE' | 'OTHER';
+  email?: string;
+};`,
+        consumer: `export async function editPatient(
+  id: string,
+  input: PatientsApi.UpdatePatientDto,
+): Promise<PatientsApi.PatientResponseDto> {
+  const result = await updatePatient({ path: { id }, body: input });
+  if (result.error) throw new Error(result.error.message);
+  return result.data!;
+}`,
+        hint: `Every field optional — PartialType(CreatePatientDto) from @nestjs/swagger did that automatically, carrying each field's @ApiProperty through as optional. Same "partial update, all fields optional" pattern as the microservices POC's UpdateItemRequest.`,
+      },
+      deletePatient: {
+        controller: `@Delete(':id')
+@HttpCode(204)
+@ApiOperation({ operationId: 'deletePatient', summary: 'Delete a patient' })
+@ApiResponse({ status: 204, description: 'Deleted' })
+@ApiResponse({ status: 404, type: ErrorResponseDto })
+remove(@Param('id') id: string): void {
+  this.patients.remove(id);
+}`,
+        spec: `"delete": {
+  "operationId": "deletePatient",
+  "parameters": [
+    { "name": "id", "required": true, "in": "path",
+      "schema": { "type": "string" } }
+  ],
+  "responses": {
+    "204": { "description": "Deleted" },
+    "404": { "content": { "application/json": {
+      "schema": { "$ref": "#/components/schemas/ErrorResponseDto" } } } }
+  },
+  "security": [{ "apiKey": [] }]
+}`,
+        types: `export type DeletePatientData = { path: { id: string } };
+export type DeletePatientResponse = void;
+export type DeletePatientError = ErrorResponseDto;`,
+        consumer: `export async function removePatient(id: string): Promise<void> {
+  const result = await deletePatient({ path: { id } });
+  if (result.error) throw new Error(result.error.message);
+}`,
+        hint: `@HttpCode(204) on the controller becomes DeletePatientResponse = void in the generated types — the AI knows not to expect a response body.`,
+      },
+    };
+
+    let currentEndpoint = 'listPatients';
+    let currentTab = 'spec';
+
+    function renderEndpoints() {
+      const list = document.getElementById('endpoint-list');
+      const mc = { GET: 'method-GET', POST: 'method-POST', PATCH: 'method-PATCH', DELETE: 'method-DELETE' };
+      list.innerHTML = endpoints.map(ep => `
+        <button onclick="selectEndpoint('${ep.id}')"
+          class="ep-btn ${ep.id === currentEndpoint ? 'active' : ''}">
+          <span class="method ${mc[ep.method] || ''}">${ep.method}</span>${ep.label.replace(/^(GET|POST|PATCH|DELETE)\s/, '')}
+        </button>`).join('');
+    }
+
+    function renderCode() {
+      const d = data[currentEndpoint];
+
+      const ctrlEl = document.getElementById('controller-code-inner');
+      ctrlEl.textContent = d.controller;
+      ctrlEl.className = 'language-typescript';
+      Prism.highlightElement(ctrlEl);
+
+      const genEl = document.getElementById('gen-code-inner');
+      genEl.textContent = currentTab === 'spec' ? d.spec : d.types;
+      genEl.className = currentTab === 'spec' ? 'language-json' : 'language-typescript';
+      Prism.highlightElement(genEl);
+
+      const consEl = document.getElementById('consumer-code-inner');
+      consEl.textContent = d.consumer;
+      consEl.className = 'language-typescript';
+      Prism.highlightElement(consEl);
+
+      document.getElementById('ai-hint').textContent = d.hint;
+    }
+
+    function selectEndpoint(id) {
+      currentEndpoint = id;
+      renderEndpoints();
+      renderCode();
+    }
+
+    function switchTab(tab) {
+      currentTab = tab;
+      document.getElementById('tab-spec').className  = 'tab' + (tab === 'spec'  ? ' active' : '');
+      document.getElementById('tab-types').className = 'tab' + (tab === 'types' ? ' active' : '');
+      renderCode();
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      mermaid.initialize({
+        startOnLoad: true,
+        theme: 'base',
+        securityLevel: 'loose',
+        fontFamily: "'Inter', sans-serif",
+        flowchart: { curve: 'basis', padding: 16 },
+        themeVariables: { fontSize: '13px' },
+      });
+      renderEndpoints();
+      renderCode();
+    });
+  </script>
+</body>
+</html>
