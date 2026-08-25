@@ -1,4 +1,4 @@
-import { client } from './generated/index.js';
+import { client } from './generated/client.gen.js';
 import { AuthenticationManager } from './managers/AuthenticationManager.js';
 
 export interface ApiClientConfig {

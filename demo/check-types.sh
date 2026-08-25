@@ -2,11 +2,9 @@
 # Demo helper: type-check BOTH the backend and the frontend against the
 # current contract.
 #
-# This POC deliberately avoids TS project references / composite builds
-# (the thing that made `nx run-many -t typecheck` unreliable in the Nx POC —
-# see that repo's demo/SCRIPT.md for the postmortem). Both tsconfigs here run
-# plain `tsc --noEmit`, which re-checks from source every time with nothing
-# to go stale. No --force needed, no cache to clear.
+# This POC deliberately avoids TS project references / composite builds.
+# Both tsconfigs here run plain `tsc --noEmit`, which re-checks from source
+# every time with nothing to go stale. No --force needed, no cache to clear.
 cd "$(dirname "$0")/.."
 
 echo "── Backend ─────────────────────────────────────────"

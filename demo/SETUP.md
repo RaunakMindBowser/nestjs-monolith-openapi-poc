@@ -159,11 +159,18 @@ your dumped JSON instead of a YAML file:
 import { defineConfig } from '@hey-api/openapi-ts';
 
 export default defineConfig({
-  client: '@hey-api/client-fetch',
   input: './openapi.json',              // the file generate-spec.ts writes
-  output: { path: 'src/generated', format: 'prettier' },
+  output: 'src/generated',
+  plugins: ['@hey-api/client-axios'],
 });
 ```
+
+Install `axios` as the runtime HTTP client and `@hey-api/openapi-ts` as a
+devDependency. From openapi-ts 0.73 the Axios client is bundled in the
+generator — do **not** also install `@hey-api/client-axios` (that package is
+deprecated). After generate, import the client instance from
+`src/generated/client.gen.ts` (it is no longer re-exported from
+`generated/index.ts`).
 
 **No `ServiceLoader` aggregator needed.** That pattern in the microservices
 POC exists to pick between several generated packages at runtime via dynamic
@@ -173,10 +180,11 @@ import. With one backend there's exactly one client — just export it:
 // libs/api-client/src/index.ts
 export * from './generated/index.js';
 export { configureApiClient } from './configure.js';
+export { AuthenticationManager, SESSION_EXPIRED_EVENT } from './managers/AuthenticationManager.js';
 export type * as PatientsApi from './generated/types.gen.js';
 ```
 
-`configureApiClient()` sets the base URL and an auth header interceptor once,
+`configureApiClient()` sets the Axios `baseURL` and auth interceptors once,
 at app bootstrap — see `libs/api-client/src/configure.ts`.
 
 ---
@@ -191,7 +199,7 @@ type-checks against a lib's *emitted* `.d.ts` can pass on broken code right
 after a regen, because the build considers the lib's dist "still current" per
 its `.tsbuildinfo` timestamp. If your monorepo already uses project
 references for other reasons, run `tsc --build --force` in the check you gate
-CI on — see the postmortem in `../nx-openapi-poc/demo/SCRIPT.md` step 7.
+CI on. This repo uses plain `tsc --noEmit` so nothing goes stale.
 
 ---
 

@@ -9,10 +9,9 @@
     "generate": "openapi-ts"
   },
   "dependencies": {
-    "@hey-api/client-axios": "0.2.9",
-    "axios": "^1.7.9"
+    "axios": "^1.19.0"
   },
   "devDependencies": {
-    "@hey-api/openapi-ts": "^0.53.12"
+    "@hey-api/openapi-ts": "^0.99.0"
   }
 }
