@@ -1,0 +1,18 @@
+{
+  "name": "{{CLIENT_PACKAGE_NAME}}",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "scripts": {
+    "generate": "openapi-ts"
+  },
+  "dependencies": {
+    "@hey-api/client-axios": "{{HEY_API_CLIENT_AXIOS_VERSION}}",
+    "axios": "^1.7.9"
+  },
+  "devDependencies": {
+    "@hey-api/openapi-ts": "{{HEY_API_OPENAPI_TS_VERSION}}"
+  }
+}

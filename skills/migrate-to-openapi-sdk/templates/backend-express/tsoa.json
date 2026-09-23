@@ -1,0 +1,23 @@
+{
+  "entryFile": "{{ENTRY_FILE}}",
+  "noImplicitAdditionalProperties": "throw-on-extras",
+  "controllerPathGlobs": ["src/**/*.controller.ts"],
+  "spec": {
+    "outputDirectory": "{{RELATIVE_PATH_TO_CLIENT_LIB}}",
+    "specFileBaseName": "openapi",
+    "specVersion": 3,
+    "name": "{{SERVICE_TITLE}} API",
+    "description": "Code-first OpenAPI — generated from tsoa decorators/types, not written by hand",
+    "securityDefinitions": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
+    }
+  },
+  "routes": {
+    "routesDir": "src/generated-routes",
+    "authenticationModule": "./src/auth/authentication.ts"
+  }
+}
